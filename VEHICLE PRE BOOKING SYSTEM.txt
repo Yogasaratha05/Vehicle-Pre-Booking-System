@@ -1,0 +1,265 @@
+<!DOCTYPE html> 
+<html lang="en"> 
+<head> 
+<meta charset="UTF-8" /> 
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
+<title>Vehicle Pre-Booking System</title> 
+<style> 
+body { 
+font-family: Arial, sans-serif; 
+background: #f4f4f4; 
+padding: 20px; 
+} 
+.container { 
+max-width: 800px; 
+margin: auto; 
+background: #fff; 
+padding: 20px; 
+border-radius: 10px; 
+box-shadow: 0 0 10px rgba(0,0,0,0.1); 
+} 
+h2, h3 { 
+text-align: center; 
+} 
+input, select, button { 
+width: 100%; 
+padding: 10px; 
+margin: 10px 0; 
+13 
+box-sizing: border-box; 
+} 
+table { 
+width: 100%; 
+border-collapse: collapse; 
+margin-top: 20px; 
+} 
+th, td { 
+border: 1px solid #ccc; 
+padding: 10px; 
+text-align: left; 
+} 
+.btn { 
+background-color: #4CAF50; 
+color: white; 
+border: none; 
+cursor: pointer; 
+} 
+.btn:hover { 
+background-color: #45a049; 
+} 
+.logout { 
+background: #f44336; 
+} 
+.hidden { 
+display: none; 
+} 
+.actions button { 
+margin-right: 5px; 
+14 
+} 
+</style> 
+</head> 
+<body> 
+<div class="container"> 
+<h2>Vehicle Pre-Booking System</h2> 
+<!-- Booking Section --> 
+<div id="bookingSection"> 
+<input type="text" id="customerName" placeholder="Enter Your Name" 
+oninput="renderCustomerBookings()" required /> 
+<select id="vehicle" required> 
+<option value="">Select Vehicle</option> 
+</select> 
+<input type="date" id="bookingDate" required /> 
+<input type="time" id="bookingTime" required /> 
+<button class="btn" onclick="bookVehicle()">Book Vehicle</button> 
+<h3>Your Bookings</h3> 
+<table> 
+<thead> 
+<tr> 
+<th>Customer</th> 
+<th>Vehicle</th> 
+<th>Date</th> 
+<th>Time</th> 
+<th>Actions</th> 
+</tr> 
+15 
+</thead> 
+<tbody id="customerBookingList"></tbody> 
+</table> 
+</div> 
+<!-- Admin Access --> 
+<button class="btn" onclick="showAdminLogin()">Admin Panel</button> 
+<!-- Admin Login --> 
+<div id="adminLoginSection" class="hidden"> 
+<h3>Admin Login</h3> 
+<input type="text" id="adminId" placeholder="Admin ID" /> 
+<input type="password" id="adminPass" placeholder="Password" /> 
+<button class="btn" onclick="loginAdmin()">Login</button> 
+</div> 
+<!-- Admin View --> 
+<div id="adminSection" class="hidden"> 
+<h3>All Bookings</h3> 
+<table> 
+<thead> 
+<tr> 
+<th>Customer</th> 
+<th>Vehicle</th> 
+<th>Date</th> 
+<th>Time</th> 
+</tr> 
+</thead> 
+<tbody id="adminBookingList"></tbody> 
+16 
+</table> 
+<button class="btn logout" onclick="logoutAdmin()">Logout</button> 
+</div> 
+</div> 
+<script> 
+const allVehicles = [ 
+"Volvo XC90", "Hyundai i20", "BMW X7", 
+"Tata Altroz", "Honda City", "Toyota Glanza", "Mercedes G Class" 
+]; 
+let bookings = JSON.parse(localStorage.getItem("vehicleBookings")) || []; 
+let editingIndex = -1; 
+function getAvailableVehicles(editingVehicle = null) { 
+const booked = bookings 
+.map((b, i) => (i !== editingIndex ? b.vehicle : null)) 
+.filter(Boolean); 
+return allVehicles.filter(v => !booked.includes(v) || v === editingVehicle); 
+} 
+function populateDropdown(editingVehicle = null) { 
+const dropdown = document.getElementById("vehicle"); 
+dropdown.innerHTML = '<option value="">Select Vehicle</option>'; 
+getAvailableVehicles(editingVehicle).forEach(v => { 
+const opt = document.createElement("option"); 
+opt.value = v; 
+opt.textContent = v; 
+dropdown.appendChild(opt); 
+17 
+}); 
+} 
+function bookVehicle() { 
+const name = document.getElementById("customerName").value.trim(); 
+const vehicle = document.getElementById("vehicle").value; 
+const date = document.getElementById("bookingDate").value; 
+const time = document.getElementById("bookingTime").value; 
+if (!name || !vehicle || !date || !time) { 
+alert("Please fill all fields."); 
+return; 
+} 
+if (editingIndex >= 0) { 
+bookings[editingIndex] = { customerName: name, vehicle, date, time }; 
+editingIndex = -1; 
+} else { 
+bookings.push({ customerName: name, vehicle, date, time }); 
+} 
+localStorage.setItem("vehicleBookings", JSON.stringify(bookings)); 
+alert("Booking saved!"); 
+resetForm(); 
+renderCustomerBookings(); 
+populateDropdown(); 
+} 
+function resetForm() { 
+18 
+document.getElementById("bookingDate").value = ""; 
+document.getElementById("bookingTime").value = ""; 
+document.getElementById("vehicle").value = ""; 
+editingIndex = -1; 
+} 
+function renderCustomerBookings() { 
+const name = document.getElementById("customerName").value.trim(); 
+const tbody = document.getElementById("customerBookingList"); 
+tbody.innerHTML = ""; 
+if (!name) return; 
+bookings.forEach((b, i) => { 
+if (b.customerName === name) { 
+tbody.innerHTML += ` 
+<tr> 
+<td>${b.customerName}</td> 
+<td>${b.vehicle}</td> 
+<td>${b.date}</td> 
+<td>${b.time}</td> 
+<td class="actions"> 
+<button class="btn" onclick="editBooking(${i})">Edit</button> 
+<button class="btn logout" 
+onclick="deleteBooking(${i})">Delete</button> 
+</td> 
+</tr> 
+`; 
+} 
+19 
+}); 
+} 
+function editBooking(index) { 
+const b = bookings[index]; 
+const currentName = 
+document.getElementById("customerName").value.trim(); 
+if (b.customerName !== currentName) { 
+alert("You can only edit your own bookings."); 
+return; 
+} 
+document.getElementById("vehicle").value = b.vehicle; 
+document.getElementById("bookingDate").value = b.date; 
+document.getElementById("bookingTime").value = b.time; 
+editingIndex = index; 
+populateDropdown(b.vehicle); 
+} 
+function deleteBooking(index) { 
+const currentName = 
+document.getElementById("customerName").value.trim(); 
+if (bookings[index].customerName !== currentName) { 
+alert("You can only delete your own bookings."); 
+return; 
+} 
+if (confirm("Are you sure you want to delete your booking?")) { 
+bookings.splice(index, 1); 
+localStorage.setItem("vehicleBookings", JSON.stringify(bookings)); 
+renderCustomerBookings(); 
+20 
+populateDropdown(); 
+} 
+} 
+function showAdminLogin() { 
+document.getElementById("bookingSection").classList.add("hidden"); // 
+Hide customer booking 
+document.getElementById("adminLoginSection").classList.remove("hidden"); 
+} 
+function loginAdmin() { 
+const id = document.getElementById("adminId").value; 
+const pass = document.getElementById("adminPass").value; 
+if (id === "admin123" && pass === "admin@123") { 
+document.getElementById("adminLoginSection").classList.add("hidden"); 
+document.getElementById("adminSection").classList.remove("hidden"); 
+renderAdminBookings(); 
+// bookingSection stays hidden while admin is logged in 
+} else { 
+alert("Invalid credentials."); 
+} 
+} 
+function renderAdminBookings() { 
+const tbody = document.getElementById("adminBookingList"); 
+tbody.innerHTML = ""; 
+21 
+bookings.forEach(b => { 
+tbody.innerHTML += ` 
+<tr> 
+<td>${b.customerName}</td> 
+<td>${b.vehicle}</td> 
+<td>${b.date}</td> 
+<td>${b.time}</td> 
+</tr> 
+`; 
+}); 
+} 
+function logoutAdmin() { 
+document.getElementById("adminSection").classList.add("hidden"); 
+document.getElementById("adminId").value = ""; 
+document.getElementById("adminPass").value = ""; 
+document.getElementById("bookingSection").classList.remove("hidden"); 
+// Show customer booking again 
+} 
+// Initialize dropdown 
+populateDropdown(); 
+</script> 
+</body> 
+</html>
